@@ -1,0 +1,7 @@
+{
+  "functions": {
+    "api/diagnosticar.py": {
+      "includeFiles": "sistema_experto/**"
+    }
+  }
+}

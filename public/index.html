@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diagnóstico de fallas FTTH/GPON</title>
+<meta name="description" content="Sistema experto para diagnosticar fallas en redes de fibra óptica FTTH/GPON a partir de potencia óptica y alarmas de ONT/OLT.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --fondo:#e9eff2; --panel:#f8fafb; --tinta:#14232b; --suave:#51636d; --linea:#c9d5db;
+  --fibra:#1f5fbf; --fibra-osc:#174a96; --ok:#2a8a68; --aviso:#d98a00; --alarma:#c23b3b;
+  --radio:10px;
+  --titulo:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --texto:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--fondo);color:var(--tinta);font:17px/1.55 var(--texto)}
+h1,h2,h3{font-family:var(--titulo);line-height:1.15;margin:0}
+.envoltura{max-width:1180px;margin:0 auto;padding:40px 20px 72px}
+header{max-width:62ch;margin-bottom:32px}
+h1{font-size:clamp(2.2rem,5vw,3.6rem);font-weight:800;letter-spacing:-.02em}
+header p{color:var(--suave);margin:14px 0 0;font-size:1.05rem}
+.rejilla{display:grid;gap:24px;grid-template-columns:1fr}
+@media(min-width:960px){.rejilla{grid-template-columns:minmax(0,420px) minmax(0,1fr);align-items:start}}
+.panel{background:var(--panel);border:1px solid var(--linea);border-radius:var(--radio);padding:22px}
+h2{font-size:1.35rem;font-weight:600;margin-bottom:14px}
+fieldset{border:0;padding:0;margin:0 0 22px}
+legend{font-weight:700;padding:0;margin-bottom:8px}
+.ayuda{color:var(--suave);font-size:.9rem;margin:0 0 8px}
+.dos{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+label.campo{display:block;font-size:.95rem}
+input[type=number]{width:100%;margin-top:4px;padding:10px 12px;font:inherit;border:1px solid var(--linea);border-radius:8px;background:#fff;color:var(--tinta)}
+.opciones{display:grid;gap:8px}
+.opcion{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--linea);border-radius:8px;background:#fff;cursor:pointer}
+.opcion:has(input:checked){border-color:var(--fibra);background:#eaf1fb}
+.opcion input{margin-top:4px;accent-color:var(--fibra)}
+.opcion small{display:block;color:var(--suave)}
+.rejilla-chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:8px 12px;border:1px solid var(--linea);border-radius:999px;background:#fff;font:inherit;font-size:.92rem;cursor:pointer;color:var(--tinta)}
+.chip:hover{border-color:var(--fibra)}
+.acciones{display:flex;gap:10px;flex-wrap:wrap}
+button.principal{background:var(--fibra);color:#fff;border:0;border-radius:8px;padding:12px 20px;font:700 1rem var(--texto);cursor:pointer}
+button.principal:hover{background:var(--fibra-osc)}
+button.secundario{background:transparent;border:1px solid var(--linea);border-radius:8px;padding:12px 18px;font:inherit;cursor:pointer;color:var(--tinta)}
+:focus-visible{outline:3px solid var(--fibra);outline-offset:2px}
+.medidor-envoltura{margin-bottom:20px}
+.medidor-envoltura svg{width:100%;height:auto;display:block}
+.vacio{padding:28px 6px;color:var(--suave)}
+.vacio strong{display:block;color:var(--tinta);font-family:var(--titulo);font-size:1.2rem;margin-bottom:6px}
+.error{background:#fbeaea;border:1px solid #e3b4b4;color:#7b2323;padding:12px 14px;border-radius:8px;margin-bottom:16px}
+.diag{border:1px solid var(--linea);border-radius:var(--radio);background:#fff;padding:18px;margin-bottom:14px}
+.diag.principal-diag{border-color:var(--fibra);border-width:2px}
+.diag h3{font-size:1.2rem;font-weight:600}
+.barra-fila{display:flex;align-items:center;gap:12px;margin:10px 0}
+.barra{flex:1;height:10px;background:#e3eaee;border-radius:99px;overflow:hidden}
+.barra span{display:block;height:100%;background:var(--fibra);border-radius:99px;transition:width .5s ease}
+.principal-diag .barra span{background:var(--ok)}
+.pct{font-weight:700;min-width:3.2ch;text-align:right}
+.diag p{margin:0 0 10px;color:var(--suave)}
+.diag h4{margin:14px 0 6px;font-size:1rem}
+.diag ol,.diag ul{margin:0;padding-left:22px}
+.diag li{margin-bottom:4px}
+details{margin-top:12px;border-top:1px solid var(--linea);padding-top:10px}
+summary{cursor:pointer;font-weight:700;color:var(--fibra-osc)}
+.regla{font-size:.92rem;color:var(--suave)}
+.faltan{background:#fff6e3;border:1px solid #ecd49a;border-radius:8px;padding:12px 14px;margin-top:6px}
+.faltan ul{margin:6px 0 0;padding-left:20px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <header>
+    <h1>Diagnóstico de fallas en fibra óptica</h1>
+    <p>Ingresa lo que ves en la ONT y en la OLT. El sistema aplica reglas de experto y te dice qué causa es más probable y qué revisar primero.</p>
+  </header>
+
+  <div class="rejilla">
+    <form class="panel" id="formulario" novalidate>
+      <h2>Lo que observas</h2>
+
+      <fieldset>
+        <legend>Potencia óptica</legend>
+        <p class="ayuda">Si la ONT está en LOS y no hay lectura, déjalo vacío.</p>
+        <div class="dos">
+          <label class="campo">Rx en la ONT (dBm)
+            <input type="number" id="rx_ont" step="0.1" inputmode="decimal" placeholder="-26.5">
+          </label>
+          <label class="campo">Rx en la OLT (dBm)
+            <input type="number" id="rx_olt" step="0.1" inputmode="decimal" placeholder="-22.0">
+          </label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>¿Cuántos clientes están afectados?</legend>
+        <div class="opciones">
+          <label class="opcion"><input type="radio" name="alcance" value="una_ont" checked><span>Solo este cliente</span></label>
+          <label class="opcion"><input type="radio" name="alcance" value="varias_splitter"><span>Varios del mismo splitter<small>Misma NAP o caja de distribución</small></span></label>
+          <label class="opcion"><input type="radio" name="alcance" value="todo_puerto_pon"><span>Todo el puerto PON</span></label>
+          <label class="opcion"><input type="radio" name="alcance" value="varios_puertos"><span>Varios puertos de la OLT</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Alarmas activas</legend>
+        <div class="opciones">
+          <label class="opcion"><input type="checkbox" name="alarma" value="LOS"><span>LOS<small>Pérdida de señal</small></span></label>
+          <label class="opcion"><input type="checkbox" name="alarma" value="DYING_GASP"><span>Dying gasp<small>La ONT avisó que perdió energía</small></span></label>
+          <label class="opcion"><input type="checkbox" name="alarma" value="LOF"><span>LOF<small>Pérdida de trama</small></span></label>
+          <label class="opcion"><input type="checkbox" name="alarma" value="HIGH_BER"><span>BER alto<small>Muchos errores de bits</small></span></label>
+          <label class="opcion"><input type="checkbox" name="alarma" value="ONT_OFFLINE"><span>ONT fuera de línea</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Contexto</legend>
+        <div class="opciones">
+          <label class="opcion"><input type="checkbox" id="intermitente"><span>La falla es intermitente</span></label>
+          <label class="opcion"><input type="checkbox" name="contexto" value="obras"><span>Hay obras cerca del tendido</span></label>
+          <label class="opcion"><input type="checkbox" name="contexto" value="manipulacion"><span>El cliente movió o tocó la fibra o la ONT</span></label>
+          <label class="opcion"><input type="checkbox" name="contexto" value="lluvia"><span>Está lloviendo o llovió hace poco</span></label>
+          <label class="opcion"><input type="checkbox" name="contexto" value="instalacion_nueva"><span>Instalación reciente</span></label>
+        </div>
+      </fieldset>
+
+      <div class="acciones">
+        <button type="submit" class="principal">Diagnosticar</button>
+        <button type="button" class="secundario" id="limpiar">Limpiar</button>
+      </div>
+    </form>
+
+    <section aria-live="polite">
+      <div class="panel">
+        <h2>Nivel de potencia</h2>
+        <div class="medidor-envoltura" id="medidor"></div>
+        <p class="ayuda">Rangos GPON clase B+: sano de -8 a -25 dBm en la ONT. Más bajo de -28 dBm el enlace no tiene margen.</p>
+        <div class="rejilla-chips" role="group" aria-label="Casos de ejemplo">
+          <span class="ayuda" style="margin:0;align-self:center">Prueba un caso:</span>
+        </div>
+      </div>
+      <div id="resultado" style="margin-top:20px">
+        <div class="panel vacio"><strong>Aún no hay diagnóstico</strong>Completa los síntomas y presiona Diagnosticar, o carga un caso de ejemplo.</div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+const EJEMPLOS = [
+  {t:"Conector sucio", d:{rx_ont:-26.5, alcance:"una_ont"}},
+  {t:"Corte de drop", d:{alarmas:["LOS"], alcance:"una_ont"}},
+  {t:"Sin energía", d:{alarmas:["LOS","DYING_GASP"], alcance:"una_ont"}},
+  {t:"Splitter dañado", d:{rx_ont:-27.2, rx_olt:-25, alcance:"varias_splitter"}},
+  {t:"Corte troncal", d:{alarmas:["LOS"], alcance:"todo_puerto_pon", contexto:["obras"]}},
+  {t:"Sobrecarga", d:{rx_ont:-5.5, alcance:"una_ont"}},
+  {t:"Enlace sano", d:{rx_ont:-19.8, alcance:"una_ont"}}
+];
+
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => [...document.querySelectorAll(s)];
+const esc = (t) => String(t).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+/* ---------- Medidor de potencia (dBm) ---------- */
+const MIN = -40, MAX = 0, X0 = 24, X1 = 536;
+const x = (dbm) => X0 + ((Math.min(MAX, Math.max(MIN, dbm)) - MIN) / (MAX - MIN)) * (X1 - X0);
+
+function dibujarMedidor() {
+  const ont = parseFloat($("#rx_ont").value);
+  const olt = parseFloat($("#rx_olt").value);
+  const bandas = [
+    [-40, -28, "var(--alarma)"], [-28, -25, "var(--aviso)"],
+    [-25, -8, "var(--ok)"], [-8, 0, "var(--alarma)"]
+  ];
+  let s = `<svg viewBox="0 0 560 120" role="img" aria-label="Escala de potencia óptica en dBm">`;
+  bandas.forEach(([a, b, c]) => { s += `<rect x="${x(a)}" y="46" width="${x(b) - x(a)}" height="16" fill="${c}" opacity=".85"/>`; });
+  for (let v = -40; v <= 0; v += 5) {
+    s += `<line x1="${x(v)}" x2="${x(v)}" y1="62" y2="70" stroke="#51636d"/><text x="${x(v)}" y="86" font-size="12" fill="#51636d" text-anchor="middle">${v}</text>`;
+  }
+  s += `<text x="${X1}" y="108" font-size="12" fill="#51636d" text-anchor="end">dBm</text>`;
+  const marca = (v, texto, color, arriba) => {
+    const px = x(v), anc = px > 460 ? "end" : px < 100 ? "start" : "middle";
+    return `<path d="M${px - 7} ${arriba} L${px + 7} ${arriba} L${px} 44 Z" fill="${color}"/>` +
+           `<text x="${px}" y="${arriba - 6}" font-size="13" font-weight="700" fill="${color}" text-anchor="${anc}">${texto} ${v.toFixed(1)}</text>`;
+  };
+  if (!isNaN(ont)) s += marca(ont, "ONT", "#1f5fbf", 22);
+  if (!isNaN(olt)) s += marca(olt, "OLT", "#14232b", isNaN(ont) || Math.abs(x(ont) - x(olt)) > 90 ? 22 : 8);
+  s += `</svg>`;
+  $("#medidor").innerHTML = s;
+}
+
+/* ---------- Formulario ---------- */
+function leerFormulario() {
+  const num = (id) => { const v = $(id).value.trim(); return v === "" ? null : Number(v); };
+  return {
+    rx_ont: num("#rx_ont"),
+    rx_olt: num("#rx_olt"),
+    alcance: $("input[name=alcance]:checked").value,
+    alarmas: $$("input[name=alarma]:checked").map(i => i.value),
+    contexto: $$("input[name=contexto]:checked").map(i => i.value),
+    intermitente: $("#intermitente").checked
+  };
+}
+
+function cargar(d, correr = true) {
+  $("#rx_ont").value = d.rx_ont ?? "";
+  $("#rx_olt").value = d.rx_olt ?? "";
+  $(`input[name=alcance][value=${d.alcance || "una_ont"}]`).checked = true;
+  $$("input[name=alarma]").forEach(i => i.checked = (d.alarmas || []).includes(i.value));
+  $$("input[name=contexto]").forEach(i => i.checked = (d.contexto || []).includes(i.value));
+  $("#intermitente").checked = !!d.intermitente;
+  dibujarMedidor();
+  if (correr) diagnosticar();
+}
+
+async function diagnosticar() {
+  const salida = $("#resultado");
+  try {
+    const r = await fetch("/api/diagnosticar", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(leerFormulario())
+    });
+    const datos = await r.json();
+    if (!r.ok) throw new Error(datos.error || "No se pudo diagnosticar.");
+    mostrar(datos);
+  } catch (e) {
+    salida.innerHTML = `<div class="error"><strong>No se pudo completar el diagnóstico.</strong><br>${esc(e.message)}</div>`;
+  }
+}
+
+function mostrar(datos) {
+  const salida = $("#resultado");
+  if (!datos.diagnosticos.length) {
+    salida.innerHTML = `<div class="panel vacio"><strong>Datos insuficientes</strong>Con estos síntomas ninguna regla alcanza confianza suficiente. Agrega la potencia Rx o una alarma.</div>` + faltan(datos);
+    return;
+  }
+  salida.innerHTML = datos.diagnosticos.map((d, i) => `
+    <article class="diag ${i === 0 ? "principal-diag" : ""}">
+      <h3>${esc(d.nombre)}</h3>
+      <div class="barra-fila">
+        <div class="barra" role="img" aria-label="Confianza ${d.confianza}%"><span style="width:${d.confianza}%"></span></div>
+        <span class="pct">${d.confianza}%</span>
+      </div>
+      <p>${esc(d.descripcion)}</p>
+      ${i < 3 ? `<h4>Qué hacer, en orden</h4><ol>${d.acciones.map(a => `<li>${esc(a)}</li>`).join("")}</ol>` : ""}
+      <details>
+        <summary>Por qué llegó a esta conclusión</summary>
+        <ul>${d.reglas.map(r => `<li class="regla"><strong>${esc(r.id)}</strong>: si ${esc(r.si.charAt(0).toLowerCase() + r.si.slice(1))} (certeza ${Math.round(r.cf * 100)}%)</li>`).join("")}</ul>
+      </details>
+    </article>`).join("") + faltan(datos);
+  salida.firstElementChild.scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "nearest"});
+}
+
+function faltan(datos) {
+  if (!datos.faltantes.length) return "";
+  return `<div class="faltan"><strong>Para afinar el diagnóstico</strong><ul>${datos.faltantes.map(f => `<li>${esc(f)}</li>`).join("")}</ul></div>`;
+}
+
+/* ---------- Eventos ---------- */
+$("#formulario").addEventListener("submit", (e) => { e.preventDefault(); diagnosticar(); });
+$("#rx_ont").addEventListener("input", dibujarMedidor);
+$("#rx_olt").addEventListener("input", dibujarMedidor);
+$("#limpiar").addEventListener("click", () => {
+  cargar({}, false);
+  $("#resultado").innerHTML = `<div class="panel vacio"><strong>Aún no hay diagnóstico</strong>Completa los síntomas y presiona Diagnosticar, o carga un caso de ejemplo.</div>`;
+});
+
+const contenedorChips = $(".rejilla-chips");
+EJEMPLOS.forEach(ej => {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "chip"; b.textContent = ej.t;
+  b.addEventListener("click", () => cargar(ej.d));
+  contenedorChips.appendChild(b);
+});
+
+dibujarMedidor();
+</script>
+</body>
+</html>
